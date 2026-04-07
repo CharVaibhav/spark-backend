@@ -2,8 +2,13 @@ import { Redis } from 'ioredis';
 import { env } from './env.js';
 
 // Two separate connections are required — a subscriber cannot publish
-export const publisher = new Redis(env.REDIS_URL);
-export const subscriber = new Redis(env.REDIS_URL);
+const redisOptions = {
+  maxRetriesPerRequest: null,
+  retryStrategy: (times: number) => Math.min(times * 100, 3000), // Retry with backoff
+};
+
+export const publisher = new Redis(env.REDIS_URL, redisOptions);
+export const subscriber = new Redis(env.REDIS_URL, redisOptions);
 
 publisher.on('connect', () => console.log('✅  Redis publisher connected'));
 publisher.on('error', (err) => console.error('❌  Redis publisher error:', err.message));
