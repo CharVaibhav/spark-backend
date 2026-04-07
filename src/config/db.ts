@@ -16,7 +16,7 @@ export async function initializeDb(): Promise<void> {
 
     // Ensure users have a credit balance natively
     try {
-      await db.execute('ALTER TABLE users ADD COLUMN available_credits INTEGER DEFAULT 50');
+      await db.execute('ALTER TABLE users ADD COLUMN available_credits INTEGER DEFAULT 20');
       log('➕ Added available_credits column to users');
     } catch {
       // Column exists, safe to ignore
@@ -30,7 +30,7 @@ export async function initializeDb(): Promise<void> {
         email TEXT UNIQUE NOT NULL,
         name TEXT,
         clerk_id TEXT,
-        available_credits INTEGER DEFAULT 50,
+        available_credits INTEGER DEFAULT 20,
         created_at TEXT NOT NULL
       )`,
 

@@ -19,3 +19,8 @@ export function generateJobId(): string {
 export function generateUserId(): string {
   return `user_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
 }
+
+/** Generate a prefixed message ID — e.g. msg_a1b2c3d4e5f6 */
+export function generateMessageId(): string {
+  return `msg_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
+}

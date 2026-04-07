@@ -31,10 +31,10 @@ export async function createUser(input: CreateUserInput): Promise<User> {
 
   await db.execute({
     sql: 'INSERT INTO users (id, email, name, clerk_id, available_credits, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-    args: [id, email, name, clerkId ?? null, 50, now],
+    args: [id, email, name, clerkId ?? null, 20, now],
   });
 
-  return { id, email, name, clerk_id: clerkId, available_credits: 50, created_at: now };
+  return { id, email, name, clerk_id: clerkId, available_credits: 20, created_at: now };
 }
 
 /** Get a user by their internal ID */

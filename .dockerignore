@@ -1,0 +1,12 @@
+node_modules
+dist
+.env
+*.db
+*.db-shm
+*.db-wal
+.git
+.gitignore
+README.md
+spark_backend_plan.md
+src/test
+src/test/output

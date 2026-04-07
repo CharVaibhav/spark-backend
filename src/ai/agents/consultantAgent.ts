@@ -1,5 +1,7 @@
 import { Agent } from '@mastra/core/agent';
 import { z } from 'zod';
+import { Memory } from '@mastra/memory';
+import { LibSQLStore } from '@mastra/libsql';
 import { crawlTool } from '../tools/crawlTool.js';
 
 export const ConsultantReviewSchema = z.object({
@@ -67,6 +69,13 @@ export const consultantAgent = new Agent({
     Your tone is professional, brutally honest, and visionary. Use "Voice of the Partner" language—authoritative and data-driven.
   `,
   model: 'google/gemini-3.1-flash-lite-preview',
+  memory: new Memory({
+    storage: new LibSQLStore({
+      id: "consultant-agent-memory",
+      url: process.env.TURSO_DATABASE_URL || "file:./mastra.db",
+      authToken: process.env.TURSO_AUTH_TOKEN,
+    }),
+  }),
   tools: {
     crawlTool
   }

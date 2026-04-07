@@ -1,0 +1,55 @@
+services:
+  # 1. The API Web Service
+  - type: web
+    name: spark-api
+    env: docker
+    dockerContext: .
+    dockerfilePath: Dockerfile
+    plan: starter # Adjust based on budget, but starter is usually enough for Express
+    region: singapore # Closest to India
+    healthCheckPath: /health # Ensure you have a health route
+    envVars:
+      - key: PORT
+        value: 3001
+      - key: NODE_ENV
+        value: production
+      - fromGroup: spark-secrets
+      - fromGroup: spark-db-redis
+
+  # 2. The AI Background Worker
+  - type: worker
+    name: spark-worker
+    env: docker
+    dockerContext: .
+    dockerfilePath: Dockerfile
+    dockerCommand: npm run start:worker
+    plan: starter
+    region: singapore
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - fromGroup: spark-secrets
+      - fromGroup: spark-db-redis
+
+envVarGroups:
+  - name: spark-secrets
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GOOGLE_GENERATIVE_AI_API_KEY
+        sync: false # Set in Render UI
+      - key: EXA_API_KEY
+        sync: false # Set in Render UI
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+
+  - name: spark-db-redis
+    envVars:
+      - key: REDIS_URL
+        sync: false # Point to your production Redis (e.g. Render Redis or Upstash)
+      - key: TURSO_DATABASE_URL
+        sync: false # Point to your Turso DB URL
+      - key: TURSO_AUTH_TOKEN
+        sync: false

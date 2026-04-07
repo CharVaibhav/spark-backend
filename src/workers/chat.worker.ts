@@ -2,6 +2,7 @@ import { Redis } from 'ioredis';
 import { env } from '../config/env.js';
 import { CHANNELS } from '../config/redis.js';
 import { publishChunk, publishResult } from '../services/redis.service.js';
+import { saveMessage, updateThreadTitle } from '../services/chat.service.js';
 import { ChatJob } from '../types/redis.types.js';
 import { createLogger } from '../utils/logger.js';
 
@@ -33,16 +34,26 @@ export async function startChatWorker(): Promise<void> {
       });
 
       // Stream chunks via Redis
+      let fullText = '';
       for await (const chunk of output.textStream) {
         if (chunk) {
+          fullText += chunk;
           await publishChunk(jobId, chunk);
         }
       }
 
       await output.getFullOutput();
 
+      // Persist agent response & update thread title
+      if (fullText) {
+        await saveMessage(threadId, 'assistant', fullText);
+      }
 
-      // Signal chat is done — use jobId as the channel key (not runId)
+      // Set thread title from first user message (trimmed to 60 chars)
+      const titleSlug = chatMessage.length > 60 ? chatMessage.slice(0, 60) + '...' : chatMessage;
+      await updateThreadTitle(threadId, titleSlug);
+
+      // Signal chat is done
       await publishResult(jobId, {
         type: 'chat_done',
         runId: jobId,

@@ -30,3 +30,11 @@ export interface ChatThread {
   title?: string;
   created_at: string;
 }
+
+export interface ChatMessage {
+  message_id: string;
+  thread_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+}

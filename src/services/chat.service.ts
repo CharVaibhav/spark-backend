@@ -1,11 +1,48 @@
 import { db } from '../config/db.js';
 import { CHANNELS } from '../config/redis.js';
 import { publishJob } from './redis.service.js';
-import { generateThreadId, generateJobId } from '../utils/id.js';
+import { generateThreadId, generateJobId, generateMessageId } from '../utils/id.js';
 import { ChatJob } from '../types/redis.types.js';
-import { ChatThread } from '../types/spark.types.js';
+import { ChatThread, ChatMessage } from '../types/spark.types.js';
 import logger from '../utils/logger.js';
 import { deductCredits } from './credit.service.js';
+
+/** Persist a single message into chat_messages */
+export async function saveMessage(
+  threadId: string,
+  role: 'user' | 'assistant',
+  content: string
+): Promise<void> {
+  const messageId = generateMessageId();
+  const now = new Date().toISOString();
+  await db.execute({
+    sql: 'INSERT INTO chat_messages (message_id, thread_id, role, content, created_at) VALUES (?, ?, ?, ?, ?)',
+    args: [messageId, threadId, role, content, now],
+  });
+}
+
+/** Update a thread's title (called after the first user message) */
+export async function updateThreadTitle(threadId: string, title: string): Promise<void> {
+  await db.execute({
+    sql: 'UPDATE chat_threads SET title = ? WHERE thread_id = ?',
+    args: [title, threadId],
+  });
+}
+
+/** Get all messages for a thread ordered chronologically */
+export async function getMessagesByThread(threadId: string): Promise<ChatMessage[]> {
+  const result = await db.execute({
+    sql: 'SELECT * FROM chat_messages WHERE thread_id = ? ORDER BY created_at ASC',
+    args: [threadId],
+  });
+  return result.rows.map((row) => ({
+    message_id: row.message_id as string,
+    thread_id: row.thread_id as string,
+    role: row.role as 'user' | 'assistant',
+    content: row.content as string,
+    created_at: row.created_at as string,
+  }));
+}
 
 /** Create a new chat thread in Turso */
 export async function createThread(userId: string, runId?: string): Promise<{ threadId: string }> {
@@ -33,6 +70,9 @@ export async function initiateChat(
 
   const jobId = generateJobId();
   const now = new Date().toISOString();
+
+  // Persist the user's message immediately
+  await saveMessage(threadId, 'user', message);
 
   const job: ChatJob = { jobId, userId, threadId, message, runId, timestamp: now };
   await publishJob(CHANNELS.CHAT_JOB, job);

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { authMiddleware } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { chatLimiter } from '../middleware/rateLimiter.js';
-import { createThread, sendMessage, streamChatEvents, getThreads } from '../controllers/chat.controller.js';
+import { createThread, sendMessage, streamChatEvents, getThreads, getMessages } from '../controllers/chat.controller.js';
 
 const router = Router();
 
@@ -25,5 +25,6 @@ router.post(
 
 router.get('/events/:jobId', streamChatEvents);
 router.get('/threads', getThreads);
+router.get('/threads/:threadId/messages', getMessages);
 
 export default router;

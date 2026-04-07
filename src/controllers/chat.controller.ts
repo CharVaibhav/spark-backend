@@ -49,3 +49,10 @@ export const getThreads: RequestHandler = asyncHandler(async (req, res) => {
   const threads = await chatService.getThreadsByUser(req.userId!);
   res.json({ success: true, data: threads });
 });
+
+/** GET /api/chat/threads/:threadId/messages — load message history for a thread */
+export const getMessages: RequestHandler = asyncHandler(async (req, res) => {
+  const { threadId } = req.params;
+  const messages = await chatService.getMessagesByThread(threadId);
+  res.json({ success: true, data: messages });
+});
