@@ -23,7 +23,6 @@ ENV NODE_ENV=production
 # Copy built files and production dependencies
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/workers.ts ./workers.ts
 COPY --from=builder /app/prod-server.js ./prod-server.js
 
 # Install ONLY production dependencies
