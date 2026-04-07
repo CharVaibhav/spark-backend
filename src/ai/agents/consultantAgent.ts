@@ -68,7 +68,7 @@ export const consultantAgent = new Agent({
 
     Your tone is professional, brutally honest, and visionary. Use "Voice of the Partner" language—authoritative and data-driven.
   `,
-  model: 'groq/llama-3.3-70b-versatile',
+  model: 'google/gemini-3.1-flash-lite-preview',
   memory: new Memory({
     storage: new LibSQLStore({
       id: "consultant-agent-memory",

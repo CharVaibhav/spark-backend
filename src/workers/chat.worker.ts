@@ -28,22 +28,68 @@ export async function startChatWorker(): Promise<void> {
       const { mastra } = await import('../ai/index.js');
       const agent = mastra.getAgent('consultantAgent');
 
-      log.info('Running Consultant Agent (Streaming)', { jobId, threadId });
+      log.info('Running Advisor Attempt (Primary: Gemini 3.1)', { jobId, threadId });
 
-      const output = await agent.stream(chatMessage, {
-        memory: { thread: threadId, resource: userId }
-      });
+      let output;
+      try {
+        // Try the smart primary model first
+        output = await agent.stream(chatMessage, {
+          memory: { thread: threadId, resource: userId }
+        });
+      } catch (primaryErr: any) {
+        const isBusy = 
+           primaryErr.message?.toLowerCase().includes('demand') || 
+           primaryErr.message?.toLowerCase().includes('busy') || 
+           primaryErr.message?.toLowerCase().includes('unavailable') ||
+           primaryErr.message?.toLowerCase().includes('503');
 
-      // Stream chunks via Redis
-      let fullText = '';
-      for await (const chunk of output.textStream) {
-        if (chunk) {
-          fullText += chunk;
-          await publishChunk(jobId, chunk);
+        if (isBusy) {
+           log.warn('Gemini Busy! Cascading to Groq fallback...', { jobId });
+           
+           // Force the model switch on the agent instance
+           (agent as any).model = 'groq/llama-3.3-70b-versatile';
+
+           output = await agent.stream(chatMessage, {
+             memory: { thread: threadId, resource: userId }
+           });
+        } else {
+           throw primaryErr; // Re-throw if it wasn't a "busy" error
         }
       }
 
-      await output.getFullOutput();
+      // Stream chunks via Redis
+      let fullText = '';
+      try {
+        for await (const chunk of (output as any).textStream) {
+          if (chunk) {
+            fullText += chunk;
+            await publishChunk(jobId, chunk);
+          }
+        }
+      } catch (streamErr: any) {
+        log.warn('Gemini stream threw during iteration, will cascade.', { jobId });
+        // fullText stays empty, fallback runs below
+      }
+
+      // KEY FIX: Mastra swallows 503 errors and ends the stream silently.
+      // If we got no content out of Gemini, cascade to Groq immediately.
+      if (!fullText) {
+        log.warn('Gemini returned empty response (likely 503). Cascading to Groq...', { jobId });
+        
+        (agent as any).model = 'groq/llama-3.3-70b-versatile';
+        const fallbackOutput = await agent.stream(chatMessage, {
+          memory: { thread: threadId, resource: userId }
+        });
+
+        for await (const chunk of (fallbackOutput as any).textStream) {
+          if (chunk) {
+            fullText += chunk;
+            await publishChunk(jobId, chunk);
+          }
+        }
+      }
+
+      await (output as any).getFullOutput().catch(() => {});
 
       // Persist agent response & update thread title
       if (fullText) {
@@ -62,12 +108,12 @@ export async function startChatWorker(): Promise<void> {
 
       log.info('Chat job complete', { jobId });
     } catch (err: any) {
-      log.error('Chat job failed', { jobId: job?.jobId, error: err.message });
+      log.error('Chat job failed (including cascade)', { jobId: job?.jobId, error: err.message });
 
       if (job) {
         const { userId, jobId } = job;
-        // Refund credits if the LLM or worker failed after deduction
-        await refundCredits(userId, 2, 'Consultant Chat Failure');
+        // Refund credits only if both attempts failed
+        await refundCredits(userId, 2, 'Consultant Chat Failure (Full Cascade Exhausted)');
 
         await publishResult(jobId, {
           type: 'error',
