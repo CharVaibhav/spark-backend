@@ -5,6 +5,7 @@ import { publishChunk, publishResult } from '../services/redis.service.js';
 import { ValidateJob } from '../types/redis.types.js';
 import { createLogger } from '../utils/logger.js';
 import { db } from '../config/db.js';
+import { refundCredits } from '../services/credit.service.js';
 
 const log = createLogger('validate.worker');
 
@@ -142,15 +143,21 @@ export async function startValidateWorker(): Promise<void> {
       const runId = job?.runId ?? 'unknown';
       log.error('Validate job failed', { runId, error: err.message });
 
-      if (job?.runId) {
-        await db.execute({
-          sql: `UPDATE spark_runs SET status = 'failed', updated_at = ? WHERE run_id = ?`,
-          args: [new Date().toISOString(), job.runId],
+      if (job) {
+        const { userId, runId } = job;
+        // Refund 15 credits for validation failure
+        await refundCredits(userId, 15, 'Idea Validation Failure').catch(e => {
+           log.error('Failed to refund validation credits', { error: e.message, userId });
         });
 
-        await publishResult(job.runId, {
+        await db.execute({
+          sql: `UPDATE spark_runs SET status = 'failed', updated_at = ? WHERE run_id = ?`,
+          args: [new Date().toISOString(), runId],
+        });
+
+        await publishResult(runId, {
           type: 'error',
-          runId: job.runId,
+          runId,
           error: err.message,
         });
       }

@@ -5,6 +5,7 @@ import { publishChunk, publishResult } from '../services/redis.service.js';
 import { BlueprintJob } from '../types/redis.types.js';
 import { createLogger } from '../utils/logger.js';
 import { db } from '../config/db.js';
+import { refundCredits } from '../services/credit.service.js';
 
 const log = createLogger('blueprint.worker');
 
@@ -72,15 +73,21 @@ export async function startBlueprintWorker(): Promise<void> {
     } catch (err: any) {
       log.error('Blueprint job failed', { runId: job?.runId, error: err.message });
 
-      if (job?.runId) {
-        await db.execute({
-          sql: `UPDATE spark_runs SET status = 'failed', updated_at = ? WHERE run_id = ?`,
-          args: [new Date().toISOString(), job.runId],
+      if (job) {
+        const { userId, runId } = job;
+        // Refund 25 credits for blueprint failure
+        await refundCredits(userId, 25, 'Technical Blueprint Failure').catch(e => {
+          log.error('Failed to refund blueprint credits', { error: e.message, userId });
         });
 
-        await publishResult(job.runId, {
+        await db.execute({
+          sql: `UPDATE spark_runs SET status = 'failed', updated_at = ? WHERE run_id = ?`,
+          args: [new Date().toISOString(), runId],
+        });
+
+        await publishResult(runId, {
           type: 'error',
-          runId: job.runId,
+          runId: runId,
           error: err.message,
         });
       }

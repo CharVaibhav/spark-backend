@@ -3,6 +3,7 @@ import { env } from '../config/env.js';
 import { CHANNELS } from '../config/redis.js';
 import { publishChunk, publishResult } from '../services/redis.service.js';
 import { saveMessage, updateThreadTitle } from '../services/chat.service.js';
+import { refundCredits } from '../services/credit.service.js';
 import { ChatJob } from '../types/redis.types.js';
 import { createLogger } from '../utils/logger.js';
 
@@ -63,10 +64,14 @@ export async function startChatWorker(): Promise<void> {
     } catch (err: any) {
       log.error('Chat job failed', { jobId: job?.jobId, error: err.message });
 
-      if (job?.jobId) {
-        await publishResult(job.jobId, {
+      if (job) {
+        const { userId, jobId } = job;
+        // Refund credits if the LLM or worker failed after deduction
+        await refundCredits(userId, 2, 'Consultant Chat Failure');
+
+        await publishResult(jobId, {
           type: 'error',
-          runId: job.jobId,
+          runId: jobId,
           error: err.message,
         });
       }
