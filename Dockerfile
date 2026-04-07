@@ -23,11 +23,8 @@ ENV NODE_ENV=production
 # Copy built files and production dependencies
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/dist ./dist
-# We need src for some imports if they are not fully bundled, 
-# although tsc usually handles imports correctly in dist.
-# Since workers.ts was in root, and "main": "dist/server.js", 
-# Let's ensure the folder structure is correct.
 COPY --from=builder /app/workers.ts ./workers.ts
+COPY --from=builder /app/prod-server.js ./prod-server.js
 
 # Install ONLY production dependencies
 RUN npm install --omit=dev
@@ -38,5 +35,5 @@ RUN npx playwright install chromium --with-deps
 
 EXPOSE 3001
 
-# The start command is overridden by render.yaml
-CMD ["npm", "run", "start"]
+# Start both API and Worker in one container via the bootstrap script
+CMD ["node", "prod-server.js"]
