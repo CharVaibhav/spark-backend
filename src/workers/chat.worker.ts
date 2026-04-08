@@ -28,7 +28,7 @@ export async function startChatWorker(): Promise<void> {
       const { mastra } = await import('../ai/index.js');
       const agent = mastra.getAgent('consultantAgent');
 
-      log.info('Running Advisor Attempt (Primary: Gemini 3.1)', { jobId, threadId });
+      log.info('Running Advisor Attempt (Primary: Gemini 3 Flash Preview)', { jobId, threadId });
 
       let output;
       try {
@@ -44,7 +44,7 @@ export async function startChatWorker(): Promise<void> {
            primaryErr.message?.toLowerCase().includes('503');
 
         if (isBusy) {
-           log.warn('Gemini Busy! Cascading to Groq fallback...', { jobId });
+           log.warn('Gemini Flash 3 Busy! Cascading to Groq fallback...', { jobId });
            
            // Force the model switch on the agent instance
            (agent as any).model = 'groq/llama-3.3-70b-versatile';

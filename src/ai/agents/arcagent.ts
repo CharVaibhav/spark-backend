@@ -54,6 +54,6 @@ export const archAgent = new Agent({
     3. Write a flawless Mermaid.js diagram. For hardware, use it to show how components wire together (MCU -> Sensor -> Battery). For software, show the data flow (Client -> API Gateway -> DB).
     4. Keep the "Phase One Blueprint" actionable. What should the developer literally type into their terminal or solder together today?
   `,
-  model: 'google/gemini-3.1-flash-lite-preview',
+  model: 'google/gemini-3-flash-preview',
 });
 

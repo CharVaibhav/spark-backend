@@ -70,7 +70,7 @@ export const researchAgent = new Agent({
     - If all crawls fail, summarize using the search keywords + your training knowledge,
       and clearly label it as "based on training knowledge, not live data".
   `,
-  model: 'google/gemini-3.1-flash-lite-preview',
+  model: 'google/gemini-3-flash-preview',
   tools: {
     searchTool,
     crawlTool,

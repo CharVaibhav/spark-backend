@@ -33,5 +33,5 @@ export const pmAgent = new Agent({
     4. FOCUS ON DIFFERENTIATION: Your "marketGap" field is the most important—how will this be 10x better or different than existing solutions?
     5. IDENTIFY RISKS: Be brutally honest about why this project might fail (technical debt, market crowdedness, weak distribution).
   `,
-  model: 'google/gemini-3.1-flash-lite-preview',
+  model: 'google/gemini-3-flash-preview',
 });
